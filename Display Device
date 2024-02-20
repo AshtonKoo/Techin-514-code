@@ -1,0 +1,49 @@
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+#include "AccelStepper.h"
+
+// Define motor interface type and pins
+#define motorInterfaceType 1
+#define stepPin 26
+#define dirPin 25
+
+AccelStepper stepper(motorInterfaceType, stepPin, dirPin);
+
+// BLE Service and Characteristic UUIDs used to receive data
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+void setup() {
+  Serial.begin(115200);
+  stepper.setMaxSpeed(1000);
+  stepper.setAcceleration(500);
+
+  BLEDevice::init("Air Quality Display");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ | 
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+  pCharacteristic->setCallbacks(new MyCallbacks()); // Implement this class to handle data received via BLE
+  pService->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->start();
+
+  Serial.println("Stepper motor initialized, BLE advertising started");
+}
+
+void loop() {
+  // The loop remains empty; stepper motor moves are handled in BLE callbacks
+}
+
+// Example callback handler to move stepper based on received AQI
+class MyCallbacks: public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic *pCharacteristic) {
+    std::string value = pCharacteristic->getValue();
+    if (value.length() > 0) {
+      int aqi = std::stoi(value); // Convert received value to integer
+      // Move stepper based on AQI value
+      // You'll need to map
