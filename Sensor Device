@@ -1,0 +1,53 @@
+#include <Wire.h>
+#include "Adafruit_BME688.h"
+#include "BLEDevice.h"
+
+Adafruit_BME688 bme;
+
+// BLE Service and Characteristic UUIDs
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+void setup() {
+  Serial.begin(115200);
+  if (!bme.begin()) {
+    Serial.println("Could not find a valid BME688 sensor, check wiring!");
+    while (1);
+  }
+  
+  BLEDevice::init("Air Quality Sensor");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ | 
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+  pService->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->start();
+  
+  Serial.println("BME688 Sensor started, BLE advertising started");
+}
+
+void loop() {
+  if (!bme.performReading()) {
+    Serial.println("Failed to perform reading :(");
+    return;
+  }
+  float temperature = bme.temperature;
+  float humidity = bme.humidity;
+  float pressure = bme.pressure;
+  // Assume you convert these readings into an AQI value
+  float aqi = calculateAQI(temperature, humidity, pressure); // Implement this based on your requirements
+
+  // Convert AQI to string and send over BLE (simplified for demonstration)
+  String aqiStr = String(aqi);
+  // Your BLE sending logic here
+  delay(2000); // Delay between readings
+}
+
+float calculateAQI(float temperature, float humidity, float pressure) {
+  // Placeholder for actual AQI calculation logic
+  return (temperature + humidity + pressure) / 3; // Simplified example
+}
